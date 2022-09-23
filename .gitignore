@@ -1,3 +1,4 @@
+checkpoints/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,4 +9,7 @@ __pycache__/
 thumbs.db
 .DS_Store
 .idea
-
+*.wav
+*.txt
+*.vtt
+*.pt
