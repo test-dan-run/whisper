@@ -7,6 +7,12 @@
 
 Whisper is a general-purpose speech recognition model. It is trained on a large dataset of diverse audio and is also a multi-task model that can perform multilingual speech recognition as well as speech translation and language identification.
 
+## Remote Usage
+```bash
+# docker pull dleongsh/whisper:1.10.0-cuda11.3-large
+# the large model is added into the docker image to save time from downloading model from internet
+>> python lid_inference_remote.py --dataset_id <clearml_dataset_id> --manifest <manifest-name i.e. manifest.json>
+```
 
 ## Approach
 
