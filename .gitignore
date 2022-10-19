@@ -10,6 +10,5 @@ thumbs.db
 .DS_Store
 .idea
 *.wav
-*.txt
 *.vtt
 *.pt

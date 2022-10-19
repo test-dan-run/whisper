@@ -1,40 +1,59 @@
 import os
 import json
 import tqdm
-import whisper
 import argparse
 from typing import Any, List, Dict
 
-def detect_language_from_path(path: str, model: Any) -> str:
+import torch
+from torch.utils.data import Dataset, DataLoader
 
-    # load audio and pad/trim it to fit 30 seconds
-    audio = whisper.load_audio(path)
-    audio = whisper.pad_or_trim(audio)
 
-    # make log-Mel spectrogram and move to the same device as the model
-    mel = whisper.log_mel_spectrogram(audio).to(model.device)
 
-    # detect the spoken language
-    _, probs = model.detect_language(mel)
-    lang = max(probs, key=probs.get)
+import whisper
 
-    print(f"[{path}] Detected language: {lang}")
+class LIDInferenceDataset(Dataset):
+    def __init__(self, manifest_path: str, device: str = 'cuda'):
+        super(LIDInferenceDataset, self).__init__()
 
-    return lang
+        self.device = device
 
-def detect_language_from_manifest(manifest_path: str, model: Any) -> List[Dict[str, str]]:
+        with open(manifest_path, mode='r', encoding='utf-8') as fr:
+            lines = fr.readlines()
+        base_dir = os.path.dirname(manifest_path)
 
-    with open(manifest_path, 'r', encoding='utf-8') as fr:
-        lines = fr.readlines()
-    items = [json.loads(line.strip('\r\n')) for line in lines]
-    base_dir = os.path.dirname(manifest_path)
+        self.items = [json.loads(line.strip('\r\n')) for line in lines]
+        self.paths = [os.path.join(base_dir, item['audio_filepath']) for item in self.items]
 
-    for item in tqdm.tqdm(items):
-        audio_filepath = os.path.join(base_dir, item['audio_filepath'])
-        lang = detect_language_from_path(audio_filepath, model)
-        item['language_pred'] = lang
+    def __len__(self):
+        return len(self.paths)
 
-    return items
+    def __getitem__(self, idx):
+
+        path = self.paths[idx]
+        audio = whisper.load_audio(path)
+        audio = whisper.pad_or_trim(audio)
+
+        mel = whisper.log_mel_spectrogram(audio).to(self.device)
+
+        return mel
+
+def detect_language_from_manifest(manifest_path: str, model: Any, batch_size: int = 1, num_workers: int = 0) -> List[Dict[str, str]]:
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dataset = LIDInferenceDataset(manifest_path, device)
+    dataloader = DataLoader(dataset, shuffle=False, batch_size=batch_size, num_workers=num_workers)
+
+    langs = []
+    for idx, batch in tqdm.tqdm(enumerate(dataloader), total=len(dataloader)):
+        with torch.no_grad():
+            _, probs = model.detect_language(batch)
+        batch_langs = [max(prob, key=prob.get) for prob in probs]
+        langs.extend(batch_langs)
+
+    for item, pred in zip(dataset.items, langs):
+        item['language_pred'] = pred
+    
+    return dataset.items
     
 def save_manifest(items: List[Dict[str, str]], save_path: str = 'pred_manifest.json') -> None:
     with open(save_path, 'w', encoding='utf-8') as fw:
@@ -48,6 +67,6 @@ if __name__ == '__main__':
     parser.add_argument('--manifest', type=str, required=True, help='Path to manifest file')
     args = parser.parse_args()
 
-    model = whisper.load_model(args.model)
+    model = whisper.load_model(args.model, device='cuda')
     pred_items = detect_language_from_manifest(args.manifest, model)
     save_manifest(pred_items)
