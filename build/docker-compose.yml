@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+
+  whisper:
+    stdin_open: true
+    tty: true
+    image: dleongsh/whisper:1.10.0-cuda11.3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    volumes:
+      - /mnt/c/projects/asr/whisper:/whisper
+      - /mnt/c/projects/asr/whisper/pretrained_models:/root/.cache/whisper
+    ports:
+      - "8000:8000"
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    shm_size: 16gb
+    working_dir: /whisper
