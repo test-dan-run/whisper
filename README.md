@@ -8,6 +8,43 @@
 Whisper is a general-purpose speech recognition model. It is trained on a large dataset of diverse audio and is also a multi-task model that can perform multilingual speech recognition as well as speech translation and language identification.
 
 
+## Docker Instructions
+Note1: We are using pytorch v1.10 built with cuda11.3. If your system has a GPU of RTX2000+ series and below, you might run into trouble running this. (DGX should be ok)
+
+Note2: We are building these docker images lean, where each image will only container 1 model. This is to ensure we don't bloat the images for no reason.
+
+To build the docker image for `tiny`:
+```bash
+docker build -t whisper:1.10.0-cuda11.3-tiny -f dockerfile --build-arg MODEL=tiny --build-arg PORT=8000 .
+```
+After successfully building the model, I have provided 2 ways for you to run inference, as listed below. You can edit the scripts as you see fit, but do remember to rebuild the image once you're done.
+
+### Running Docker - Local
+If you're running locally on your own PC, put your audio files into the `dataset` folder. Then, run the following shell script:
+```bash
+./run_dockershell.sh
+```
+The files will be found in the `output` folder.
+You can edit the shell script to change to your own data folders. If you wish to edit the `asr_inference.py` script, do remember to rebuild the image. OR, to just do quick tests, you can mount this entire repository instead.
+```bash
+# in run_dockershell.sh
+...
+    -v $PWD/dataset:/dataset \
+    -v $PWD/output:/output \
+    -v $PWD:/whisper \ # mount this repository
+    whisper:1.10.0-cuda11.3-tiny \
+...
+```
+
+### Running Docker - Microservice
+If you prefer to run it as a microservice, I have set up a quick one via FastAPI. Simply run:
+```bash
+.\run_microservice.sh
+```
+By default, this will launch a docker container with port 8000 exposed. Then, submit a request to `http://0.0.0.0:8000/<translate|transcribe>`
+
+You can view a sample request written in Python at `sample_request.py`
+
 ## Approach
 
 ![Approach](approach.png)

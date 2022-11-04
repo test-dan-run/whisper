@@ -1,8 +1,9 @@
-# docker build -f dockerfile_cu113 -t whisper:1.10.0-cuda11.3-${MODEL} .
-ARG MODEL
-
+# docker build -f dockerfile -t whisper:1.10.0-cuda11.3-${MODEL} .
 FROM pytorch/pytorch:1.10.0-cuda11.3-cudnn8-runtime
 LABEL maintainer "Daniel Leong Shao Jun <git@test-dan-run> <daniel.leongsj@gmail.com>"
+
+ARG MODEL
+ARG PORT
 
 SHELL ["/bin/bash", "-c"]
 
@@ -18,12 +19,11 @@ RUN apt-get -qq update && \
     apt-get -qq clean && \
     rm -rf /var/lib/apt/lists/*
 
-ADD requirements.txt .
+ADD . /whisper
+WORKDIR /whisper
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip cache purge
 
-RUN mkdir /root/.cache/whisper
-ADD pretrained_models/${MODEL}.pt /root/.cache/whisper/${MODEL}.pt
-
-ENTRYPOINT ["bash"]
+RUN python download_model.py $MODEL
+EXPOSE $PORT

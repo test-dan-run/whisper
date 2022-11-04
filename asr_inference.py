@@ -1,5 +1,7 @@
 import os
+import json
 import whisper
+import argparse
 from typing import Optional
 
 def load_model(model_type: Optional[str] = None) -> whisper.Whisper:
@@ -43,6 +45,25 @@ def execute_task(model: whisper.Whisper, audio_path: str, task: str = 'transcrib
     return decoded_result.text
 
 if __name__ == '__main__':
-    model = load_model('tiny')
-    result_text = execute_task(model, 'test.wav', language='English')
-    print(result_text)
+
+    parser = argparse.ArgumentParser('Run inference with whisper model')
+    parser.add_argument('--dataset_dir', type=str, default='/dataset')
+    parser.add_argument('--task', type=str, default='transcribe')
+    parser.add_argument('--language', type=str, default=None)
+    parser.add_argument('--output_path', type=str, default='output/output.json')
+    args = parser.parse_args()
+
+    model = load_model()
+    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
+
+    with open(args.output_path, mode='w') as fw:
+
+        for filename in os.listdir(args.dataset_dir):
+            print(f'Running inference on {filename}')
+            file_extension = os.path.splitext(filename)[-1]
+            # skip if file not an audio file
+            if file_extension not in ['.wav', '.mp3']:
+                continue
+            
+            result_text = execute_task(model, os.path.join(args.dataset_dir, filename), language=args.language)
+            fw.write(json.dumps({'filename': filename, 'text': result_text}))

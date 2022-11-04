@@ -5,7 +5,7 @@ services:
   whisper:
     stdin_open: true
     tty: true
-    image: dleongsh/whisper:1.10.0-cuda11.3
+    image: whisper:1.10.0-cuda11.3
     deploy:
       resources:
         reservations:

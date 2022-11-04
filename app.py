@@ -1,6 +1,6 @@
 '''
 Main file for api service
-uvicorn app:api --host 0.0.0.0 --port 8000
+uvicorn app:app --host 0.0.0.0 --port 8000
 '''
 
 import os
