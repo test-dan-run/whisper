@@ -7,8 +7,6 @@ from typing import Any, List, Dict
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-
-
 import whisper
 
 class LIDInferenceDataset(Dataset):
@@ -29,24 +27,29 @@ class LIDInferenceDataset(Dataset):
 
     def __getitem__(self, idx):
 
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
         path = self.paths[idx]
         audio = whisper.load_audio(path)
         audio = whisper.pad_or_trim(audio)
 
-        mel = whisper.log_mel_spectrogram(audio).to(self.device)
+        mel = whisper.log_mel_spectrogram(audio)
 
         return mel
 
 def detect_language_from_manifest(manifest_path: str, model: Any, batch_size: int = 1, num_workers: int = 0) -> List[Dict[str, str]]:
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = LIDInferenceDataset(manifest_path, device)
     dataloader = DataLoader(dataset, shuffle=False, batch_size=batch_size, num_workers=num_workers)
 
     langs = []
-    for idx, batch in tqdm.tqdm(enumerate(dataloader), total=len(dataloader)):
+    for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         with torch.no_grad():
+            batch = batch.to(device)
             _, probs = model.detect_language(batch)
+
         batch_langs = [max(prob, key=prob.get) for prob in probs]
         langs.extend(batch_langs)
 
@@ -65,8 +68,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run filewise language detection using Whisper.')
     parser.add_argument('--model', type=str, required=True, help='Model name')
     parser.add_argument('--manifest', type=str, required=True, help='Path to manifest file')
+    parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument('--num_workers', type=int, default=0)
     args = parser.parse_args()
 
+    torch.multiprocessing.set_start_method('spawn', force=True)
+
     model = whisper.load_model(args.model, device='cuda')
-    pred_items = detect_language_from_manifest(args.manifest, model)
+    pred_items = detect_language_from_manifest(args.manifest, model, batch_size=args.batch_size, num_workers=args.num_workers)
     save_manifest(pred_items)
