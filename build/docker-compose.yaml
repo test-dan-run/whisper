@@ -5,15 +5,15 @@ services:
   whisper:
     stdin_open: true
     tty: true
-    image: dleongsh/whisper:1.10.0-cuda11.3-v2
+    image: dleongsh/whisper:2.1.1-cuda12.1
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
     volumes:
-      - /mnt/c/projects/whisper:/whisper
-      - /mnt/c/projects/whisper_models:/root/.cache/whisper
+      - ../:/whisper
+      - /mnt/d/datasets:/datasets
     ulimits:
       memlock: -1
       stack: 67108864
