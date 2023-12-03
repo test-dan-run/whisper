@@ -1,3 +1,7 @@
+"""
+# TODO: this code needs to be refactored, has not yet been tested
+"""
+
 from clearml import Task, Dataset
 task = Task.init(project_name='LID/Whisper', task_name='MMS')
 task.set_base_docker('dleongsh/whisper:1.10.0-cuda11.3-large')
